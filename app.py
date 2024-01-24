@@ -42,17 +42,17 @@ earned_income_data = {}
 for year in range(2023, 2026):
     # Generate a unique key for each input to prevent duplicate widgets
     income_label = f"{'Household' if is_married else 'Your'} Earned Income in {year}"
-    key = f"{'married' if is_married else 'single'}_earned_income_{year}"
+    key = f"earned_income_{year}"
     earned_income_data[year] = st.number_input(income_label, key=key, value=0)
 
 
 # Function to construct the household situation
-def get_household_info(year, is_married, num_ctc_eligible_children, employment_income, employment_income_last_year):
+def get_household_info(year, is_married, num_ctc_eligible_children, earned_income_data, employment_income_last_year):
     situation = {
         "people": {
             "you": {
                 "age": {str(year): DEFAULT_ADULT_AGE},
-                "earned_income": {str(year): employment_income},
+                "earned_income": {str(year): earned_income_data},
                 "earned_income_last_year": {str(year): employment_income_last_year},
 
             }
@@ -69,7 +69,7 @@ def get_household_info(year, is_married, num_ctc_eligible_children, employment_i
     if is_married:
         situation["people"]["your partner"] = {
             "age": {str(year): DEFAULT_ADULT_AGE},
-            "earned_income": {str(year): employment_income},  
+            "earned_income": {str(year): earned_income_data},  
         }
         members.append("your partner")
 
@@ -81,14 +81,18 @@ def get_household_info(year, is_married, num_ctc_eligible_children, employment_i
     situation["households"] = {"your household": {"members": members}}
 
     baseline = Simulation(situation=situation)
-    baseline_income = baseline.calculate("household_net_income", year)
+    baseline_income = baseline.calculate("income_tax_before_refundable_credits", year)
 
     reform_simulation = Simulation(reform=reform, situation=situation)
-    reform_income = reform_simulation.calculate("household_net_income", year)
+    reform_income = reform_simulation.calculate("income_tax_before_refundable_credits", year)
 
     income_change = reform_income - baseline_income
 
-    return income_change
+    refundable_ctc = reform_simulation.calculate("refundable_ctc", year)
+
+    # Maybe do ctc change?
+
+    return income_change, refundable_ctc
 
 
 # Initialize a dictionary to keep track of the last year's employment income
@@ -106,19 +110,19 @@ for year in range(2023, 2026):
 # Dictionary to store income changes for each year
 income_changes = {}
 last_year_income = 0  # Initialize last_year_income
+refundable_ctc_values = {}
 
 for year in range(2023, 2026):
     earned_income = earned_income_data[year]
-    # For the year 2023, there's no previous income, so use the current year's income
     if year == 2023:
         last_year_income = earned_income
-    # Call the function with the correct arguments
-    income_change = get_household_info(year, is_married, num_ctc_eligible_children, earned_income, last_year_income)
-    # Store the income change for the year
+    income_change, refundable_ctc = get_household_info(year, is_married, num_ctc_eligible_children, earned_income, last_year_income)
     income_changes[year] = income_change
-    # Update last_year_income with the current year's income for the next iteration
-    last_year_income = earned_income
+    refundable_ctc_values[year] = refundable_ctc  # Store the refundable CTC value
 
+# Display the refundable CTC for each year
+for year, ctc_value in refundable_ctc_values.items():
+    st.write(f"Refundable CTC for {year}: ${ctc_value}")
 
 # Create a bar chart using Plotly
 fig = go.Figure(data=[
@@ -152,3 +156,4 @@ Please note the following assumptions in this simplified simulation:
 
 For a more tailored impact analysis that takes into account more detailed household characteristics, please visit our [full application](https://policyengine.org/us).
 """)
+# add link to pre-set CTC reform
