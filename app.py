@@ -7,31 +7,19 @@ from policyengine_core.charts import format_fig
 import pandas as pd
 
 
-# URL of the PolicyEngine logo
-LOGO_IMAGE_URL = "https://github.com/PolicyEngine/policyengine-app/blob/master/src/images/logos/policyengine/blue.png?raw=true"
-
-# Put the logo in the top centered.
-col1, col2, col3 = st.columns(
-    [1, 2, 1]
-)  # The middle column is where the image will be
-
-# Display the logo in the middle column
-with col2:
-    # Link for the clickable logo
-    PE_LINK = "https://policyengine.org"
-
-    # Create a clickable image with markdown
-    st.markdown(
-        f"<a href='{PE_LINK}' target='_blank'>"
-        f"<img src='{LOGO_IMAGE_URL}' style='display: block; margin-left: auto; margin-right: auto; width: 150px;'>"
-        "</a>",
-        unsafe_allow_html=True,
-    )
-
 # Title and subtitle.
 st.title("How would the TRAFWA Child Tax Credit impact you?")
 st.markdown(
-    "See how the Tax Relief for American Families and Workers Act would change your Child Tax Credit from 2023 to 2025. Powered by [PolicyEngine](https://policyengine.org)."
+    """
+The [Tax Relief for American Families and Workers Act](https://www.congress.gov/bill/118th-congress/house-bill/7024) would make four changes to the Child Tax Credit:
+- Raise the maximum refundable credit to \$1,800 in 2023, \$1,900 in 2024, and \$2,100 in 2025.
+- Phase in the refundable credit on a per-child basis from 2023 to 2025.
+- Allow the refundable credit credit to be claimed based on current or prior year earnings in 2024 and 2025.
+- Inflation-adjust the non-refundable credit beginning in 2024.
+            
+This calculator shows how TRAFWA would affect your Child Tax Credit from 2023 to 2025.
+#### Your tax filing unit
+"""
 )
 
 
@@ -66,7 +54,7 @@ DEFAULT_ADULT_AGE = 40
 
 # Collecting the number of CTC-eligible children
 ctc_eligible_children = st.number_input(
-    "How many CTC-eligible children do you have?",
+    "How many CTC-eligible children (under age 17) do you have?",
     min_value=0,
     max_value=10,
     value=1,
@@ -237,7 +225,7 @@ This simulation assumes that:
 - The filer takes the standard deduction.
 - All children are eligible for the Child Tax Credit in each of 2023, 2024, and 2025.
 - Married couples file jointly.
-- [TRAFWA increases the maximum non-refundable CTC to $2,100 per child beginning in 2024.](https://github.com/PolicyEngine/policyengine-us/discussions/3726)
+- [The inflation adjustment takes effect in 2024.](https://github.com/PolicyEngine/policyengine-us/discussions/3726)
 
 To estimate how TRAFWA would affect you with more flexibility, describe your household in the [full PolicyEngine app](https://policyengine.org/us/household?reform=46315&focus=intro).
             
