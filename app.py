@@ -86,6 +86,8 @@ earnings = {}
 for year in range(2023, 2026):
     earnings[year] = get_earnings(year)
 
+submit = st.button("Calculate")
+
 
 # Construct the household situation
 situation = {
@@ -136,17 +138,12 @@ situation["tax_units"]["your tax unit"]["members"] = members
 situation["spm_units"] = {"your spm_unit": {"members": members}}
 situation["households"]["your household"]["members"] = members
 
-# Avoid computing benefits by only computing taxes and credits.
-# This will speed up the simulation.
-baseline = Simulation(situation=situation)
-reform_simulation = Simulation(reform=reform, situation=situation)
 
-
-def get_income_change(year):
-    baseline_tax = baseline.calculate(
+def get_income_change(year, baseline_simulation, reform_simulation):
+    baseline_tax = baseline_simulation.calculate(
         "income_tax_before_refundable_credits", year
     )[0]
-    baseline_actc = baseline.calculate("refundable_ctc", year)[0]
+    baseline_actc = baseline_simulation.calculate("refundable_ctc", year)[0]
 
     reform_tax = reform_simulation.calculate(
         "income_tax_before_refundable_credits", year
@@ -158,62 +155,78 @@ def get_income_change(year):
     return actc_change - tax_change
 
 
-# Dictionary to store income changes for each year
-income_changes = {}
+if submit:
+    # Avoid computing benefits by only computing taxes and credits.
+    # This will speed up the simulation.
+    baseline_simulation = Simulation(situation=situation)
+    reform_simulation = Simulation(reform=reform, situation=situation)
 
-for year in range(2023, 2026):
-    income_changes[year] = get_income_change(year)
+    # Dictionary to store income changes for each year
+    income_changes = {}
 
-total_income_change = sum(income_changes.values())
+    for year in range(2023, 2026):
+        income_changes[year] = get_income_change(
+            year, baseline_simulation, reform_simulation
+        )
 
-# Create a DataFrame from the income_changes dictionary
-df_income_changes = pd.DataFrame(
-    list(income_changes.items()), columns=["Year", "Income Change"]
-)
+    total_income_change = sum(income_changes.values())
 
-# Convert 'Year' to string if it isn't already, to ensure it displays correctly on the x-axis
-df_income_changes["Year"] = df_income_changes["Year"].astype(str)
+    # Create a DataFrame from the income_changes dictionary
+    df_income_changes = pd.DataFrame(
+        list(income_changes.items()), columns=["Year", "Income Change"]
+    )
 
-# Sum the total benefit over the three years
-total_ctc_benefit = sum(df_income_changes["Income Change"])
+    # Convert 'Year' to string if it isn't already, to ensure it displays correctly on the x-axis
+    df_income_changes["Year"] = df_income_changes["Year"].astype(str)
 
-# Update the chart title to include the total CTC benefit
-if total_ctc_benefit > 0:
-    chart_title = f"TRAFWA would raise your Child Tax Credit by ${total_ctc_benefit:,.0f} from 2023 to 2025"
-else:
-    chart_title = "TRAFWA would not affect your Child Tax Credit"
+    # Sum the total benefit over the three years
+    total_ctc_benefit = sum(df_income_changes["Income Change"])
 
-# Create a bar chart using Plotly Express with a single color for all bars
-fig = px.bar(
-    df_income_changes,
-    x="Year",
-    y="Income Change",
-    text="Income Change",
-    color_discrete_sequence=["#003f5c"],
-)
+    # Update the chart title to include the total CTC benefit
+    if total_ctc_benefit > 0:
+        chart_title = f"TRAFWA would increase your Child Tax Credit by ${total_ctc_benefit:,.0f}"
+    else:
+        chart_title = "TRAFWA would not affect your Child Tax Credit"
 
-# Update the layout to remove the legend and add the total to the title
-fig.update_layout(
-    title=chart_title,
-    showlegend=False,
-    xaxis=dict(title="", showgrid=False),
-    yaxis=dict(
-        title="TRAFWA CTC Impact",
-        tickprefix="$",
-        tickformat=",",
-        showgrid=False,
-    ),
-    font=dict(family="Roboto, sans-serif"),
-)
+    # Use markdown for the chart title so it can be bigger.
 
-# Add the dollar sign to the bar text and set the text position
-fig.update_traces(texttemplate="$%{text:,.0f}", textposition="outside")
+    st.markdown(
+        f"""
+        #### {chart_title}
+        From 2023 to 2025
+        """
+    )
 
-# Style the figure
-fig = format_fig(fig)
+    # Create a bar chart using Plotly Express with a single color for all bars
+    fig = px.bar(
+        df_income_changes,
+        x="Year",
+        y="Income Change",
+        text="Income Change",
+        color_discrete_sequence=["#003f5c"],
+    )
 
-# Display the Plotly bar chart in Streamlit
-st.plotly_chart(fig)
+    # Update the layout to remove the legend and add the total to the title
+    fig.update_layout(
+        showlegend=False,
+        xaxis=dict(title="", showgrid=False),
+        yaxis=dict(
+            title="TRAFWA CTC Impact",
+            tickprefix="$",
+            tickformat=",",
+            showgrid=False,
+        ),
+        font=dict(family="Roboto, sans-serif"),
+    )
+
+    # Add the dollar sign to the bar text and set the text position
+    fig.update_traces(texttemplate="$%{text:,.0f}", textposition="outside")
+
+    # Style the figure
+    fig = format_fig(fig)
+
+    # Display the Plotly bar chart in Streamlit
+    st.plotly_chart(fig)
 
 # Add a section for caveats at the bottom of the app
 st.markdown(
