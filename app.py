@@ -229,6 +229,7 @@ This simulation assumes that:
 - The filer takes the standard deduction.
 - All children are eligible for the Child Tax Credit in each of 2023, 2024, and 2025.
 - Married couples file jointly.
+- [TRAFWA increases the maximum non-refundable CTC to $2,100 per child beginning in 2024.](https://github.com/PolicyEngine/policyengine-us/discussions/3726)
 
 To estimate how TRAFWA would affect you with more flexibility, describe your household in the [full PolicyEngine app](https://policyengine.org/us/household?reform=46315&focus=intro).
             
