@@ -99,59 +99,67 @@ for year in range(2023, 2026):
     earnings[year] = get_earnings(year)
 
 
-# Function to construct the household situation
-def get_household_info(year, is_married, ctc_eligible_children, earnings):
-    situation = {
-        "people": {
-            "you": {
-                "age": {str(year): DEFAULT_ADULT_AGE},
-                "employment_income": {str(year): earnings[year]},
-                "employment_income_last_year": {
-                    str(year): 0 if year == 2023 else earnings[year - 1]
-                },
-            }
+# Construct the household situation
+situation = {
+    "people": {
+        "you": {
+            "age": {"2023": DEFAULT_ADULT_AGE},
+            "employment_income": {
+                "2023": earnings[2023],
+                "2024": earnings[2024],
+                "2025": earnings[2025],
+            },
+            "employment_income_last_year": {
+                "2023": 0,
+                "2024": earnings[2023],
+                "2025": earnings[2024],
+            },
         },
-        "tax_units": {
-            "your tax unit": {
-                # Zero out some quantities that won't change between baseline and reform
-                # This will improve performance.
-                "premium_tax_credit": {str(year): 0},
-                "tax_unit_itemizes": {str(year): False},
-                "taxable_income_deductions_if_itemizing": {str(year): 0},
-                "alternative_minimum_tax": {str(year): 0},
-                "net_investment_income_tax": {str(year): 0},
-                "eitc": {str(year): 0},
-            }
-        },
-        "households": {"your household": {"state_code_str": "TX"}},
-    }
-    members = ["you"]
+    },
+    "tax_units": {
+        "your tax unit": {
+            # Zero out some quantities that won't change between baseline and reform
+            # This will improve performance.
+            "premium_tax_credit": {"2023": 0},
+            "tax_unit_itemizes": {"2023": False},
+            "taxable_income_deductions_if_itemizing": {"2023": 0},
+            "alternative_minimum_tax": {"2023": 0},
+            "net_investment_income_tax": {"2023": 0},
+            "eitc": {"2023": 0},
+        }
+    },
+    "households": {"your household": {"state_code_str": "TX"}},
+}
+members = ["you"]
 
-    if is_married:
-        situation["people"]["spouse"] = {"age": {str(year): DEFAULT_ADULT_AGE}}
-        members.append("spouse")
-    for i in range(ctc_eligible_children):
-        situation["people"][f"child{i}"] = {"age": {str(year): 0}}
-        members.append(f"child{i}")
+if is_married:
+    situation["people"]["spouse"] = {"age": {"2023": DEFAULT_ADULT_AGE}}
+    members.append("spouse")
+for i in range(ctc_eligible_children):
+    situation["people"][f"child{i}"] = {"age": {"2023": 0}}
+    members.append(f"child{i}")
 
-    # Update the rest of the situation entities accordingly
-    situation["families"] = {"your family": {"members": members}}
-    situation["marital_units"] = {
-        "your marital unit": {"members": members if is_married else ["you"]}
-    }
-    situation["tax_units"]["your tax unit"]["members"] = members
-    situation["spm_units"] = {"your spm_unit": {"members": members}}
-    situation["households"]["your household"]["members"] = members
+# Update the rest of the situation entities accordingly
+situation["families"] = {"your family": {"members": members}}
+situation["marital_units"] = {
+    "your marital unit": {"members": members if is_married else ["you"]}
+}
+situation["tax_units"]["your tax unit"]["members"] = members
+situation["spm_units"] = {"your spm_unit": {"members": members}}
+situation["households"]["your household"]["members"] = members
 
-    # Avoid computing benefits by only computing taxes and credits.
-    # This will speed up the simulation.
-    baseline = Simulation(situation=situation)
+# Avoid computing benefits by only computing taxes and credits.
+# This will speed up the simulation.
+baseline = Simulation(situation=situation)
+reform_simulation = Simulation(reform=reform, situation=situation)
+
+
+def get_income_change(year):
     baseline_tax = baseline.calculate(
         "income_tax_before_refundable_credits", year
     )[0]
     baseline_actc = baseline.calculate("refundable_ctc", year)[0]
 
-    reform_simulation = Simulation(reform=reform, situation=situation)
     reform_tax = reform_simulation.calculate(
         "income_tax_before_refundable_credits", year
     )[0]
@@ -166,10 +174,7 @@ def get_household_info(year, is_married, ctc_eligible_children, earnings):
 income_changes = {}
 
 for year in range(2023, 2026):
-    income_change = get_household_info(
-        year, is_married, ctc_eligible_children, earnings
-    )
-    income_changes[year] = income_change
+    income_changes[year] = get_income_change(year)
 
 total_income_change = sum(income_changes.values())
 
@@ -185,7 +190,10 @@ df_income_changes["Year"] = df_income_changes["Year"].astype(str)
 total_ctc_benefit = sum(df_income_changes["Income Change"])
 
 # Update the chart title to include the total CTC benefit
-chart_title = f"TRAFWA would raise your Child Tax Credit by ${total_ctc_benefit:,.0f} from 2023 to 2025"
+if total_ctc_benefit > 0:
+    chart_title = f"TRAFWA would raise your Child Tax Credit by ${total_ctc_benefit:,.0f} from 2023 to 2025"
+else:
+    chart_title = "TRAFWA would not affect your Child Tax Credit"
 
 # Create a bar chart using Plotly Express with a single color for all bars
 fig = px.bar(
