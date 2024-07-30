@@ -1,4 +1,4 @@
 streamlit
-policyengine-us
+policyengine-us==0.720.0
 black
 IPython
